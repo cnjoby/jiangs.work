@@ -53,22 +53,15 @@ button {
 .theme-dark {
     background: var(--background-primary);
     color: var(--text-normal);
-    font-family: "Roboto", sans-serif;
+    font-family: var(--font-default);
 }
 
 .theme-light {
     background: white;
     color: black;
-    font-family: "Roboto", sans-serif;
+    font-family: var(--font-default);
 }
 
-a.is-unresolved {
-    color: rgb(97 186 245 / 65%);
-}
-a {
-    text-decoration: underline;
-    color: var(--text-accent);
-}
 
 .font-bg {
     font-size: 92px;

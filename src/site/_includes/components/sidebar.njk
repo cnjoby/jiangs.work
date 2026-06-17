@@ -5,45 +5,47 @@
                         {% include imp %}
                   {% endfor %}
                   {%if settings.dgShowLocalGraph === true%}
-                        <div class="graph">
-                              <div class="graph-title-container">
-                                    <div class="graph-title">Connected Pages</div>
-                                    <div id="graph-controls">
-                                          <div class="depth-control">
-                                                <label for="graph-depth">Depth</label>
-                                                <div class="slider">
-                                                      <input name="graph-depth" list="depthmarkers" type="range" step="1" min="1" max="3" id="graph-depth"/>
-                                                <datalist id="depthmarkers">
-                                                      <option value="1" label="1"></option>
-                                                      <option value="2" label="2"></option>
-                                                      <option value="3" label="3"></option>
-                                                </datalist>
-                                                </div>
-                                                <span id="depth-display"></span>
-                                          </div>
-                                          <div class="ctrl-right">
-                                                <i class="fa fa-globe" id="global-graph-btn" aria-hidden="true"></i>
-                                                <i class="fa fa-arrows-alt" id="graph-fs-btn" aria-hidden="true"></i>
-                                          </div>
-                                    </div>
-                              </div>
-                              <div id="link-graph"></div>
-                        </div>
+                        {%include "components/graphScript.njk"%}
                   {%endif%}
 
                   {%if settings.dgShowToc === true%}
-                        {%set tocHtml= (content and (content|toc)) %}
+                        {%set tocHtml= (content and (content | hideDataview | link | toc)) %}
                         {%if tocHtml %}
                               <div class="toc">
                                     <div class="toc-title-container">
                                           <div class="toc-title">
-                                                On this page
+                                                {% if title %}{{ title }}{% else %}{{ page.fileSlug }}{% endif %}
                                           </div>
                                     </div>
                                     <div class="toc-container">
                                           {{ tocHtml | safe }}
                                     </div>
                               </div>
+                              <script>
+                                    (function() {
+                                          const tocLinks = document.querySelectorAll('.toc-container a[href^="#"]');
+                                          if (!tocLinks.length) return;
+
+                                          const headings = Array.from(tocLinks).map(link => {
+                                                const id = decodeURIComponent(link.getAttribute('href').slice(1));
+                                                return { link, target: document.getElementById(id) };
+                                          }).filter(h => h.target);
+
+                                          function updateActive() {
+                                                let current = headings[0];
+                                                for (const h of headings) {
+                                                      if (h.target.getBoundingClientRect().top <= 100) {
+                                                            current = h;
+                                                      }
+                                                }
+                                                tocLinks.forEach(l => l.classList.remove('toc-active'));
+                                                if (current) current.link.classList.add('toc-active');
+                                          }
+
+                                          window.addEventListener('scroll', updateActive, { passive: true });
+                                          updateActive();
+                                    })();
+                              </script>
                         {%endif%}
 
                   {%endif%}
@@ -51,35 +53,23 @@
                         {%if settings.dgShowBacklinks === true %}
                               {%if settings.dgShowBacklinks === true %}
                               <div class="backlinks">
-                                    <div class="backlink-title" style="margin: 4px 0 !important;">Pages mentioning this page</div>
+                                    <div class="backlink-title">{{ meta.uiStrings.backlinkHeader }}</div>
                                           <div class="backlink-list">
-                                          {%- if page.url == "/" -%}
-                                                {%- if graph.nodes[graph.homeAlias].backLinks.length === 0 -%}
+                                          {%- set currentNode = graph.nodes[page.url] or graph.nodes[graph.homeAlias] -%}
+                                          {%- if currentNode -%}
+                                                {%- if currentNode.backLinks.length === 0 -%}
                                                       <div class="backlink-card">
-                                                            <span class="no-backlinks-message">No other pages mentions this page</span>
+                                                            <span class="no-backlinks-message">{{ meta.uiStrings.noBacklinksMessage }}</span>
                                                       </div>
                                                 {%- endif -%}
-                                          {%- for backlink in graph.nodes[graph.homeAlias].backLinks -%}
-                                                {%- if graph.nodes[backlink].url != graph.homeAlias -%}
-                                                <div class="backlink-card">
-                                                      <i class="fa fa-link"></i> <a href="{{graph.nodes[backlink].url}}">{{graph.nodes[backlink].title}}</a>
-                                                </div>
-                                                {%- endif -%}
-                                          {%- endfor -%}
-                                          {%- else -%}
-                                                {%- if graph.nodes[page.url].backLinks.length === 0 -%}
+                                                {%- for backlink in currentNode.backLinks -%}
+                                                      {%- if graph.nodes[backlink].url != page.url -%}
                                                       <div class="backlink-card">
-                                                            <span class="no-backlinks-message">No other pages mentions this page</span>
+                                                            {%- if not meta.noteIconsSettings.backlinks -%}<i  data-lucide="link"></i> {%- endif -%}<a href="{{graph.nodes[backlink].url}}" data-note-icon="{{graph.nodes[backlink].noteIcon}}" class="backlink">{{graph.nodes[backlink].title}}</a>
                                                       </div>
-                                                {%- endif -%}
-                                          {%- for backlink in graph.nodes[page.url].backLinks -%}
-                                                {%- if graph.nodes[backlink].url != page.url -%}
-                                                <div class="backlink-card">
-                                                      <i class="fa fa-link"></i> <a href="{{graph.nodes[backlink].url}}">{{graph.nodes[backlink].title}}</a>
-                                                </div>
-                                                {%- endif -%}
-                                          {%- endfor -%}
-                                    {%- endif -%}
+                                                      {%- endif -%}
+                                                {%- endfor -%}
+                                          {%- endif -%}
                                     </div>
                               </div>
                         {%endif%}
@@ -90,7 +80,3 @@
             </div>
       </div>
 </aside>
-
-{%if settings.dgShowLocalGraph === true %}
-      {%include "components/graphScript.njk"%}
-{% endif %}
